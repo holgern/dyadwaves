@@ -32,7 +32,8 @@
 #include <cmath>
 #include <algorithm>
 #include <kiss_fft.h>
-using namespace std;
+namespace std
+{ 
 
 //extern "C" int _get_output_format( void ){ return 0; }
 //fftw_plan plan_forward_inp,plan_forward_filt, plan_backward;
@@ -5741,6 +5742,7 @@ int filtcoef(string name, vector<double> &lp1, vector<double> &hp1, vector<doubl
         return -1;
     }
 
+}
 }
 
 
