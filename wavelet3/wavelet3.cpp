@@ -1,12 +1,14 @@
 //============================================================================
 // Name        : 1D/2D Wavelet Transform
 // Author      : Rafat Hussain
+//             : Holger Nahrstaedt
 // Version     :
 // Copyright   : GNU Lesser GPL License
 // Description : Wavelet Library
 //============================================================================
 /*Copyright (C) 2011 Rafat Hussain
-
+ *              2015, 2016 Holger Nahrstaedt
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation; version 3.
@@ -29,11 +31,12 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
-#include "fftw3.h"
+#include <kiss_fft.h>
 using namespace std;
 
-extern "C" int _get_output_format( void ){ return 0; }
-fftw_plan plan_forward_inp,plan_forward_filt, plan_backward;
+//extern "C" int _get_output_format( void ){ return 0; }
+//fftw_plan plan_forward_inp,plan_forward_filt, plan_backward;
+kiss_fft_cfg plan_forward_inp,plan_forward_filt, plan_backward;
 static unsigned int transient_size_of_fft = 0;
 
 
@@ -53,9 +56,9 @@ void* per_ext2d(vector<vector<double> > &signal,vector<vector<double> > &temp2, 
 
                 for (unsigned int i=0; i < rows; i++) {
                         vector<double> sig;
+                        sig.resize(cols);
                         for (unsigned int j=0; j< cols; j++) {
-                                double temp = signal[i][j];
-                                sig.push_back(temp);
+                                 sig[j] = signal[i][j];
                         }
                         per_ext(sig,a);
                         for (unsigned int j=0; j< sig.size(); j++) {
@@ -64,9 +67,9 @@ void* per_ext2d(vector<vector<double> > &signal,vector<vector<double> > &temp2, 
                 }
                 for (unsigned int j=0; j < temp_vec[0].size(); j++) {
                         vector<double> sig;
+                        sig.resize(rows);
                         for (unsigned int i=0; i< rows; i++) {
-                                double temp = temp_vec[i][j];
-                                sig.push_back(temp);
+                                sig[i] = temp_vec[i][j];
                         }
                         per_ext(sig,a);
                         for (unsigned int i=0; i< sig.size(); i++) {
@@ -79,9 +82,8 @@ void* per_ext2d(vector<vector<double> > &signal,vector<vector<double> > &temp2, 
 }
 
 void* swt_2d(vector<vector<double> > &sig,int J, string nm, vector<double> &swt_output) {
-    int m_size = sig.size(); // No. of rows
-    int n_size = sig[0].size(); //No. of columns
-
+//    int m_size = sig.size(); // No. of rows
+//    int n_size = sig[0].size(); //No. of columns
 //        double int_m_size1 = log10 (static_cast<double> (m_size)) / log10(2.0);
 //        double int_n_size1 = log10 (static_cast<double> (n_size)) / log10(2.0);
 //        double int_m_size = max(int_m_size1,int_n_size1);
@@ -91,8 +93,8 @@ void* swt_2d(vector<vector<double> > &sig,int J, string nm, vector<double> &swt_
 
     vector<vector<double> > sig2 =sig;
 
-    int rows_n =m_size;
-    int cols_n =n_size;
+    int rows_n;
+    int cols_n;
     vector<double> lp1,hp1,lp2,hp2;
     filtcoef(nm,lp1,hp1,lp2,hp2);
 
@@ -136,9 +138,9 @@ void* swt_2d(vector<vector<double> > &sig,int J, string nm, vector<double> &swt_
 
     for (int i=0; i < len_x; i++) {
         vector<double> temp_row;
+        temp_row.resize(len_y);
         for (int j=0; j < len_y; j++) {
-                double temp = signal[i][j];
-                temp_row.push_back(temp);
+                temp_row[j] = signal[i][j];
 
         }
 
@@ -168,9 +170,9 @@ void* swt_2d(vector<vector<double> > &sig,int J, string nm, vector<double> &swt_
 
     for (int j=0; j < cols_n; j++) {
         vector<double> temp_row;
+        temp_row.resize(len_x);
         for (int i=0; i < len_x; i++){
-                double temp = sigL[i][j];
-                temp_row.push_back(temp);
+                temp_row[i] = sigL[i][j];
         }
 
         // ------------------Low Pass Branch--------------------------
@@ -204,9 +206,9 @@ void* swt_2d(vector<vector<double> > &sig,int J, string nm, vector<double> &swt_
 
     for (int j=0; j < cols_n; j++) {
                 vector<double> temp_row;
+                temp_row.resize(len_x);
                 for (int i=0; i < len_x; i++){
-                        double temp = sigH[i][j];
-                        temp_row.push_back(temp);
+                        temp_row[i] = sigH[i][j];;
                 }
 
                 // ------------------Low Pass Branch--------------------------
@@ -280,28 +282,27 @@ void* swt_2d(vector<vector<double> > &sig,int J, string nm, vector<double> &swt_
         return 0;
 }
 
-
-void* per_ext(vector<double> &sig, int a) {
-        unsigned int len;
+void* per_ext(vector<double>& sig, int a)
+{
+    unsigned int len;
     len = sig.size();
-    if ((len % 2) != 0 ) {
-        double temp = sig[len-1];
+    if ((len % 2) != 0)
+    {
+        double temp = sig[len - 1];
         sig.push_back(temp);
         len = sig.size();
     }
 
-        for (int i=0; i < a; i++) {
-    double temp1 = sig[2 *i];
-    double temp2 = sig[len-1];
-    sig.insert(sig.begin(), temp2);
-    sig.insert(sig.end(), temp1);
+    for (int i = 0; i < a; i++)
+    {
+        double temp1 = sig[2 * i];
+        double temp2 = sig[len - 1];
+        sig.insert(sig.begin(), temp2);
+        sig.insert(sig.end(), temp1);
+    }
 
-        }
-
-        return 0;
-
+    return 0;
 }
-
 
 void* iswt(vector<double> &swtop,int J, string nm, vector<double> &iswt_output) {
          int N = swtop.size() / (J + 1);
@@ -650,9 +651,9 @@ void symm_ext2d(vector<vector<double> > &signal,vector<vector<double> > &temp2, 
 
         for (unsigned int i=0; i < rows; i++) {
                 vector<double> sig;
+                sig.resize(cols);
                 for (unsigned int j=0; j< cols; j++) {
-                        double temp = signal[i][j];
-                        sig.push_back(temp);
+                        sig[j] = signal[i][j];
                 }
                 symm_ext(sig,a);
                 for (unsigned int j=0; j< sig.size(); j++) {
@@ -661,9 +662,9 @@ void symm_ext2d(vector<vector<double> > &signal,vector<vector<double> > &temp2, 
         }
         for (unsigned int j=0; j < temp_vec[0].size(); j++) {
                 vector<double> sig;
+                sig.resize(rows);
                 for (unsigned int i=0; i< rows; i++) {
-                        double temp = temp_vec[i][j];
-                        sig.push_back(temp);
+                        sig[i] = temp_vec[i][j];
                 }
                 symm_ext(sig,a);
                 for (unsigned int i=0; i< sig.size(); i++) {
@@ -680,9 +681,9 @@ void* circshift2d(vector<vector<double> > &signal, int x, int y) {
 
         for (unsigned int i=0; i < rows; i++) {
                 vector<double> sig;
+                sig.resize(cols);
                 for (unsigned int j=0; j< cols; j++) {
-                        double temp = signal[i][j];
-                        sig.push_back(temp);
+                        sig[j] = signal[i][j];
                 }
                 circshift(sig,x);
                 for (unsigned int j=0; j< cols; j++) {
@@ -692,9 +693,9 @@ void* circshift2d(vector<vector<double> > &signal, int x, int y) {
 
         for (unsigned int j=0; j < cols; j++) {
                 vector<double> sig;
+                sig.resize(rows);
                 for (unsigned int i=0; i< rows; i++) {
-                        double temp = temp_vec[i][j];
-                        sig.push_back(temp);
+                        sig[i] = temp_vec[i][j];
                 }
                 circshift(sig,y);
                 for (unsigned int i=0; i< rows; i++) {
@@ -1101,115 +1102,110 @@ void* symm_ext(vector<double> &sig, int a) {
 
 }
 
-void* idwt_sym(vector<double> &dwtop,vector<double> &flag, string nm,
-                vector<double> &idwt_output, vector<int> &length) {
+void* idwt_sym(vector<double>& dwtop, vector<double>& flag, string nm, vector<double>& idwt_output, vector<int>& length)
+{
+    int J = (int)flag[1];
+    unsigned int lf;
 
-        int J =(int) flag[1];
-        unsigned int lf;
+    vector<double> app;
+    vector<double> detail;
+    unsigned int app_len = length[0];
+    unsigned int det_len = 0;
+    if (length.size() > 1)
+        det_len = length[1];
 
-            vector<double> app;
-            vector<double> detail;
-            unsigned int app_len = length[0];
-            unsigned int det_len = length[1];
+    vector<double>::iterator dwt;
+    dwt = dwtop.begin();
+    app.assign(dwt, dwtop.begin() + app_len);
+    detail.assign(dwtop.begin() + app_len, dwtop.begin() + 2 * app_len);
 
-        vector<double>::iterator dwt;
-        dwt = dwtop.begin();
-        app.assign(dwt,dwtop.begin()+app_len);
-        detail.assign(dwtop.begin()+app_len, dwtop.begin()+ 2* app_len);
+    for (int i = 0; i < J; i++)
+    {
+        int U = 2;  // Upsampling Factor
+        vector<double> lpd1, hpd1, lpr1, hpr1;
 
-            for (int i = 0; i < J; i++) {
+        filtcoef(nm, lpd1, hpd1, lpr1, hpr1);
+        lf = lpr1.size();
 
-                int U = 2; // Upsampling Factor
-                vector<double> lpd1,hpd1, lpr1, hpr1;
+        // Operations in the Low Frequency branch of the Synthesis Filter Bank
+        vector<double> X_lp;
+        vector<double> cA_up;
+        upsamp(app, U, cA_up);
+        cA_up.pop_back();
+        convfft(cA_up, lpr1, X_lp);
 
-                filtcoef(nm,lpd1,hpd1,lpr1,hpr1);
-                 lf = lpr1.size();
+        // Operations in the High Frequency branch of the Synthesis Filter Bank
 
+        vector<double> X_hp;
+        vector<double> cD_up;
+        upsamp(detail, U, cD_up);
+        cD_up.pop_back();
+        convfft(cD_up, hpr1, X_hp);
 
-                        // Operations in the Low Frequency branch of the Synthesis Filter Bank
-                        vector<double> X_lp;
-                        vector<double> cA_up;
-                        upsamp(app, U,cA_up );
-                        cA_up.pop_back();
-                        convfft(cA_up, lpr1, X_lp);
+        app_len += det_len;
+        vecsum(X_lp, X_hp, idwt_output);
 
+        idwt_output.erase(idwt_output.begin(), idwt_output.begin() + lf - 2);
+        idwt_output.erase(idwt_output.end() - (lf - 2), idwt_output.end());
 
-
-                        // Operations in the High Frequency branch of the Synthesis Filter Bank
-
-                        vector<double> X_hp;
-                        vector<double> cD_up;
-                        upsamp(detail, U, cD_up);
-                        cD_up.pop_back();
-                        convfft(cD_up, hpr1, X_hp);
-
-
-                app_len += det_len;
-                vecsum(X_lp,X_hp,idwt_output);
-
-                idwt_output.erase(idwt_output.begin(),idwt_output.begin()+lf-2);
-                idwt_output.erase(idwt_output.end()-(lf - 2),idwt_output.end());
-
-                app.clear();
-                detail.clear();
-                        if ( i < J - 1 ) {
-                                det_len = length[i+2];
-        //        detail.assign(dwtop.begin()+app_len, dwtop.begin()+ det_len);
-
-            for (unsigned int l = 0; l < det_len;l++) {
-                double temp = dwtop[app_len + l];
-                detail.push_back(temp);
+        app.clear();
+        detail.clear();
+        if (i < J - 1)
+        {
+            det_len = length[i + 2];
+            //        detail.assign(dwtop.begin()+app_len, dwtop.begin()+ det_len);
+            detail.resize(det_len);
+            for (unsigned int l = 0; l < det_len; l++)
+            {
+                detail[l] = dwtop[app_len + l];
             }
+        }
+        app = idwt_output;
 
-                        }
-            app = idwt_output;
+        for (int iter1 = 0; iter1 < (int)(app.size() - det_len); iter1++)
+        {
+            app.pop_back();
+        }
+    }
 
-            for (int iter1 = 0; iter1 < (int) (app.size() - det_len);iter1++) {
-                app.pop_back();
-            }
+    // Remove ZeroPadding
 
-            }
-
-
-            // Remove ZeroPadding
-
-            int zerop =(int) flag[0];
-            idwt_output.erase(idwt_output.end()- zerop,idwt_output.end());
-            return 0;
+    int zerop = (int)flag[0];
+    idwt_output.erase(idwt_output.end() - zerop, idwt_output.end());
+    return 0;
 }
 
-void* dwt1_sym(string wname, vector<double> &signal, vector<double> &cA, vector<double> &cD,int e) {
+void* dwt1_sym(string wname, vector<double>& signal, vector<double>& cA, vector<double>& cD, int e)
+{
+    vector<double> lp1, hp1, lp2, hp2;
 
-        vector<double> lp1, hp1, lp2, hp2;
+    filtcoef(wname, lp1, hp1, lp2, hp2);
+    int D = 2;  // Downsampling Factor is 2
+    int lf = lp1.size();
+    symm_ext(signal, lf - 1);
 
-                filtcoef(wname,lp1,hp1,lp2,hp2);
-                int D = 2; // Downsampling Factor is 2
-                int lf = lp1.size();
-                symm_ext(signal,lf-1);
+    vector<double> cA_undec;
+    // sig value
+    convfft(signal, lp1, cA_undec);
+    cA_undec.erase(cA_undec.begin(), cA_undec.begin() + lf);
+    cA_undec.erase(cA_undec.end() - lf + 1, cA_undec.end());
+    downsamp(cA_undec, D, cA);
+    //  cA.erase(cA.begin(),cA.begin()+(int) ceil(((double)lf-1.0)/2.0));
+    //  cA.erase(cA.end()-(int) ceil(((double)lf-1.0)/2.0),cA.end());
 
-                 vector<double> cA_undec;
-                     //sig value
-                     convfft(signal,lp1,cA_undec);
-                     cA_undec.erase(cA_undec.begin(),cA_undec.begin()+lf);
-                     cA_undec.erase(cA_undec.end()-lf+1,cA_undec.end());
-                     downsamp(cA_undec, D, cA);
-                   //  cA.erase(cA.begin(),cA.begin()+(int) ceil(((double)lf-1.0)/2.0));
-                   //  cA.erase(cA.end()-(int) ceil(((double)lf-1.0)/2.0),cA.end());
+    // High Pass Branch Computation
 
+    vector<double> cD_undec;
+    convfft(signal, hp1, cD_undec);
+    cD_undec.erase(cD_undec.begin(), cD_undec.begin() + lf);
+    cD_undec.erase(cD_undec.end() - lf + 1, cD_undec.end());
+    downsamp(cD_undec, D, cD);
+    //   cD.erase(cD.begin(),cD.begin()+(int) ceil(((double)lf-1.0)/2.0));
+    //   cD.erase(cD.end()-(int) ceil(((double)lf-1.0)/2.0),cD.end());
 
-                     //High Pass Branch Computation
+    filtcoef(wname, lp1, hp1, lp2, hp2);
 
-                     vector<double> cD_undec;
-                     convfft(signal,hp1,cD_undec);
-                     cD_undec.erase(cD_undec.begin(),cD_undec.begin()+lf);
-                     cD_undec.erase(cD_undec.end()-lf+1,cD_undec.end());
-                     downsamp(cD_undec,D,cD);
-                  //   cD.erase(cD.begin(),cD.begin()+(int) ceil(((double)lf-1.0)/2.0));
-                  //   cD.erase(cD.end()-(int) ceil(((double)lf-1.0)/2.0),cD.end());
-
-                filtcoef(wname,lp1,hp1,lp2,hp2);
-
-  return 0;
+    return 0;
 }
 
 void* dwt1_sym_m(string wname, vector<double> &signal, vector<double> &cA, vector<double> &cD) {
@@ -1246,55 +1242,56 @@ void* dwt1_sym_m(string wname, vector<double> &signal, vector<double> &cA, vecto
   return 0;
 }
 
-void* dwt_sym(vector<double> &signal, int J,string nm, vector<double> &dwt_output,
-                vector<double> &flag, vector<int> &length, int e){
-
+void* dwt_sym(vector<double>& signal, int J, string nm, vector<double>& dwt_output, vector<double>& flag,
+              vector<int>& length, int e)
+{
     unsigned int temp_len = signal.size();
-        if ( (temp_len % 2) != 0) {
-                double temp =signal[temp_len - 1];
-                signal.push_back(temp);
-                flag.push_back(1);
-                temp_len++;
-        } else {
-                flag.push_back(0);
-        }
-        length.push_back(temp_len);
-        flag.push_back(double(J));
-        // flag[2] contains symmetric extension length
-
+    if ((temp_len % 2) != 0)
+    {
+        double temp = signal[temp_len - 1];
+        signal.push_back(temp);
+        flag.push_back(1);
+        temp_len++;
+    }
+    else
+    {
+        flag.push_back(0);
+    }
+    length.push_back(temp_len);
+    flag.push_back(double(J));
+    // flag[2] contains symmetric extension length
 
     vector<double> original_copy, appx_sig, det_sig;
     original_copy = signal;
 
-        flag.push_back(double(e));
+    flag.push_back(double(e));
 
-        //  Storing Filter Values for GnuPlot
-             vector<double> lp1,hp1,lp2,hp2;
-             filtcoef(nm,lp1,hp1,lp2,hp2);
-        for (int iter = 0; iter < J; iter++) {
-            dwt1_sym(nm,signal, appx_sig, det_sig,e);
-                dwt_output.insert(dwt_output.begin(),det_sig.begin(),det_sig.end());
-            int l_temp = det_sig.size();
-            length.insert(length.begin(),l_temp);
+    //  Storing Filter Values for GnuPlot
+    vector<double> lp1, hp1, lp2, hp2;
+    filtcoef(nm, lp1, hp1, lp2, hp2);
+    for (int iter = 0; iter < J; iter++)
+    {
+        dwt1_sym(nm, signal, appx_sig, det_sig, e);
+        dwt_output.insert(dwt_output.begin(), det_sig.begin(), det_sig.end());
+        int l_temp = det_sig.size();
+        length.insert(length.begin(), l_temp);
 
-            if (iter == J-1 ) {
-                dwt_output.insert(dwt_output.begin(),appx_sig.begin(),appx_sig.end());
-                int l_temp = appx_sig.size();
-                length.insert(length.begin(),l_temp);
-
-            }
-
-            signal.clear();
-            signal = appx_sig;
-            appx_sig.clear();
-            det_sig.clear();
-
+        if (iter == J - 1)
+        {
+            dwt_output.insert(dwt_output.begin(), appx_sig.begin(), appx_sig.end());
+            l_temp = appx_sig.size();
+            length.insert(length.begin(), l_temp);
         }
-         signal = original_copy;
 
-return 0;
+        signal.clear();
+        signal = appx_sig;
+        appx_sig.clear();
+        det_sig.clear();
+    }
+    signal = original_copy;
+
+    return 0;
 }
-
 
 void* freq(vector<double> &sig, vector<double> &freq_resp) {
          unsigned int K = sig.size();
@@ -1314,156 +1311,211 @@ void* freq(vector<double> &sig, vector<double> &freq_resp) {
             return 0;
 }
 
-double convfft(vector<double> &a, vector<double> &b, vector<double> &c) {
-    fftw_complex *inp_data, *filt_data, *inp_fft, *filt_fft, *temp_data, *temp_ifft;
-    fftw_plan plan_forward_inp,plan_forward_filt, plan_backward;
+double convfft(vector<double>& a, vector<double>& b, vector<double>& c)
+{
+    // fftw_complex *inp_data, *filt_data, *inp_fft, *filt_fft, *temp_data, *temp_ifft;
+    // fftw_plan plan_forward_inp,plan_forward_filt, plan_backward;
+    kiss_fft_cpx *inp_data, *filt_data, *inp_fft, *filt_fft, *temp_data, *temp_ifft;
+    kiss_fft_cfg plan_forward_inp, plan_forward_filt, plan_backward;
+
+    int nfft[32];
+    int k;
+    int isinverse;
 
     unsigned int sz = a.size() + b.size() - 1;
-    inp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
-    filt_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    nfft[0] = sz;
+    int nbytes = sizeof(kiss_fft_cpx);
+    for (k = 0; k < 1; ++k)
+        nbytes *= nfft[k];
 
-    inp_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
-    filt_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // inp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // filt_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    inp_data = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    filt_data = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    memset(inp_data, 0, nbytes);
 
-    temp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
-    temp_ifft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // inp_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // filt_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    inp_fft = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    filt_fft = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    memset(inp_fft, 0, nbytes);
 
-    plan_forward_inp  = fftw_plan_dft_1d( sz, inp_data, inp_fft, FFTW_FORWARD, FFTW_ESTIMATE );
-    plan_forward_filt  = fftw_plan_dft_1d( sz, filt_data, filt_fft, FFTW_FORWARD, FFTW_ESTIMATE );
-    plan_backward = fftw_plan_dft_1d( sz, temp_data, temp_ifft, FFTW_BACKWARD, FFTW_ESTIMATE );
+    // temp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // temp_ifft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    temp_data = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    temp_ifft = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    memset(temp_data, 0, nbytes);
 
+    // plan_forward_inp  = fftw_plan_dft_1d( sz, inp_data, inp_fft, FFTW_FORWARD, FFTW_ESTIMATE );
+    // plan_forward_filt  = fftw_plan_dft_1d( sz, filt_data, filt_fft, FFTW_FORWARD, FFTW_ESTIMATE );
+    // plan_backward = fftw_plan_dft_1d( sz, temp_data, temp_ifft, FFTW_BACKWARD, FFTW_ESTIMATE );
+    isinverse = 0;
+    plan_forward_inp = kiss_fft_alloc(nfft[0], isinverse, 0, 0);
+    plan_forward_filt = kiss_fft_alloc(nfft[0], isinverse, 0, 0);
+    isinverse = 1;
+    plan_backward = kiss_fft_alloc(nfft[0], isinverse, 0, 0);
 
-    for (unsigned int i =0; i < sz; i++) {
-         if (i < a.size()) {
-        inp_data[i][0] = a[i];
-         } else {
-            inp_data[i][0] = 0.0;
-
-         }
-        inp_data[i][1] = 0.0;
-        if (i < b.size()) {
-                filt_data[i][0] = b[i];
-           } else {
-                filt_data[i][0] = 0.0;
-
-           }
-        filt_data[i][1] = 0.0;
-
+    for (unsigned int i = 0; i < sz; i++)
+    {
+        if (i < a.size())
+        {
+            inp_data[i].r = a[i];
+        }
+        else
+        {
+            inp_data[i].r = 0.0;
+        }
+        inp_data[i].i = 0.0;
+        if (i < b.size())
+        {
+            filt_data[i].r = b[i];
+        }
+        else
+        {
+            filt_data[i].r = 0.0;
+        }
+        filt_data[i].i = 0.0;
     }
 
+    // fftw_execute(plan_forward_inp);
 
+    // fftw_execute(plan_forward_filt);
+    kiss_fft(plan_forward_inp, inp_data, inp_fft);
+    kiss_fft(plan_forward_filt, filt_data, filt_fft);
 
-    fftw_execute(plan_forward_inp);
+    for (unsigned int i = 0; i < sz; i++)
+    {
+        temp_data[i].r = inp_fft[i].r * filt_fft[i].r - inp_fft[i].i * filt_fft[i].i;
 
-    fftw_execute(plan_forward_filt);
-
-    for (unsigned int i =0; i < sz; i++){
-         temp_data[i][0] = inp_fft[i][0]*filt_fft[i][0] - inp_fft[i][1]*filt_fft[i][1];
-
-         temp_data[i][1] = inp_fft[i][0]*filt_fft[i][1] + inp_fft[i][1]*filt_fft[i][0];
-
-
-
+        temp_data[i].i = inp_fft[i].r * filt_fft[i].i + inp_fft[i].i * filt_fft[i].r;
     }
 
-
-    fftw_execute(plan_backward);
-
-    for (unsigned int i = 0; i < sz; i++) {
-        double temp1;
-        temp1 = temp_ifft[i][0] / (double) sz;
-        c.push_back(temp1);
-
+    // fftw_execute(plan_backward);
+    c.clear();
+    c.resize(sz);
+    kiss_fft(plan_backward, temp_data, temp_ifft);
+    for (unsigned int i = 0; i < sz; i++)
+    {
+        c[i] = temp_ifft[i].r / (double)sz;
     }
-    fftw_free(inp_data);
-    fftw_free(filt_data);
-    fftw_free(inp_fft);
-    fftw_free(filt_fft);
-    fftw_free(temp_data);
-    fftw_free(temp_ifft);
-    fftw_destroy_plan(plan_forward_inp);
-    fftw_destroy_plan(plan_forward_filt);
-    fftw_destroy_plan(plan_backward);
+    free(inp_data);
+    free(filt_data);
+    free(inp_fft);
+    free(filt_fft);
+    free(temp_data);
+    free(temp_ifft);
+    free(plan_forward_inp);
+    free(plan_forward_filt);
+    free(plan_backward);
 
     return 0;
 }
 
-double convfftm(vector<double> &a, vector<double> &b, vector<double> &c) {
-    fftw_complex *inp_data, *filt_data, *inp_fft, *filt_fft, *temp_data, *temp_ifft;
+double convfftm(vector<double>& a, vector<double>& b, vector<double>& c)
+{
+    // fftw_complex *inp_data, *filt_data, *inp_fft, *filt_fft, *temp_data, *temp_ifft;
+    kiss_fft_cpx *inp_data, *filt_data, *inp_fft, *filt_fft, *temp_data, *temp_ifft;
+
+    int nfft[32];
+    int k;
+    int isinverse;
 
     unsigned int sz = a.size() + b.size() - 1;
-    inp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
-    filt_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    nfft[0] = sz;
+    int nbytes = sizeof(kiss_fft_cpx);
+    for (k = 0; k < 1; ++k)
+        nbytes *= nfft[k];
 
-    inp_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
-    filt_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // inp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // filt_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
 
-    temp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
-    temp_ifft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    inp_data = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    filt_data = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    memset(inp_data, 0, nbytes);
 
-    if (sz != transient_size_of_fft) {
+    // inp_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // filt_fft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    inp_fft = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    filt_fft = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    memset(inp_fft, 0, nbytes);
 
-        if (transient_size_of_fft != 0) {
-            fftw_destroy_plan(plan_forward_inp);
-            fftw_destroy_plan(plan_forward_filt);
-            fftw_destroy_plan(plan_backward);
+    // temp_data = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    // temp_ifft = ( fftw_complex* ) fftw_malloc( sizeof( fftw_complex ) * sz );
+    temp_data = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    temp_ifft = (kiss_fft_cpx*)KISS_FFT_MALLOC(nbytes);
+    memset(temp_data, 0, nbytes);
+
+    if (sz != transient_size_of_fft)
+    {
+        if (transient_size_of_fft != 0)
+        {
+            free(plan_forward_inp);
+            free(plan_forward_filt);
+            free(plan_backward);
         }
 
-    plan_forward_inp  = fftw_plan_dft_1d( sz, inp_data, inp_fft, FFTW_FORWARD, FFTW_MEASURE );
-    plan_forward_filt  = fftw_plan_dft_1d( sz, filt_data, filt_fft, FFTW_FORWARD, FFTW_MEASURE );
-    plan_backward = fftw_plan_dft_1d( sz, temp_data, temp_ifft, FFTW_BACKWARD, FFTW_MEASURE );
-    transient_size_of_fft = sz;
-
-}
-
-    for (unsigned int i =0; i < sz; i++) {
-         if (i < a.size()) {
-        inp_data[i][0] = a[i];
-         } else {
-            inp_data[i][0] = 0.0;
-
-         }
-        inp_data[i][1] = 0.0;
-        if (i < b.size()) {
-                filt_data[i][0] = b[i];
-           } else {
-                filt_data[i][0] = 0.0;
-
-           }
-        filt_data[i][1] = 0.0;
-
+        // plan_forward_inp  = fftw_plan_dft_1d( sz, inp_data, inp_fft, FFTW_FORWARD, FFTW_MEASURE );
+        isinverse = 0;
+        plan_forward_inp = kiss_fft_alloc(nfft[0], isinverse, 0, 0);
+        // plan_forward_filt  = fftw_plan_dft_1d( sz, filt_data, filt_fft, FFTW_FORWARD, FFTW_MEASURE );
+        plan_forward_filt = kiss_fft_alloc(nfft[0], isinverse, 0, 0);
+        isinverse = 1;
+        // plan_backward = fftw_plan_dft_1d( sz, temp_data, temp_ifft, FFTW_BACKWARD, FFTW_MEASURE );
+        plan_backward = kiss_fft_alloc(nfft[0], isinverse, 0, 0);
+        transient_size_of_fft = sz;
     }
 
-
-    fftw_execute_dft( plan_forward_inp,inp_data, inp_fft);
-    fftw_execute_dft( plan_forward_filt,filt_data, filt_fft);
-
-
-
-    for (unsigned int i =0; i < sz; i++){
-         temp_data[i][0] = inp_fft[i][0]*filt_fft[i][0] - inp_fft[i][1]*filt_fft[i][1];
-
-         temp_data[i][1] = inp_fft[i][0]*filt_fft[i][1] + inp_fft[i][1]*filt_fft[i][0];
-
-
-
+    for (unsigned int i = 0; i < sz; i++)
+    {
+        if (i < a.size())
+        {
+            inp_data[i].r = a[i];
+        }
+        else
+        {
+            inp_data[i].r = 0.0;
+        }
+        inp_data[i].i = 0.0;
+        if (i < b.size())
+        {
+            filt_data[i].r = b[i];
+        }
+        else
+        {
+            filt_data[i].r = 0.0;
+        }
+        filt_data[i].i = 0.0;
     }
 
-    fftw_execute_dft( plan_backward, temp_data, temp_ifft);
+    kiss_fft(plan_forward_inp, inp_data, inp_fft);
+    // fftw_execute_dft( plan_forward_inp,inp_data, inp_fft);
+    // fftw_execute_dft( plan_forward_filt,filt_data, filt_fft);
+    kiss_fft(plan_forward_filt, filt_data, filt_fft);
 
+    for (unsigned int i = 0; i < sz; i++)
+    {
+        temp_data[i].r = inp_fft[i].r * filt_fft[i].r - inp_fft[i].i * filt_fft[i].i;
 
-    for (unsigned int i = 0; i < sz; i++) {
-        double temp1;
-        temp1 = temp_ifft[i][0] / (double) sz;
-        c.push_back(temp1);
-
+        temp_data[i].i = inp_fft[i].r * filt_fft[i].i + inp_fft[i].i * filt_fft[i].r;
     }
-    fftw_free(inp_data);
-    fftw_free(filt_data);
-    fftw_free(inp_fft);
-    fftw_free(filt_fft);
-    fftw_free(temp_data);
-    fftw_free(temp_ifft);
+
+    // fftw_execute_dft( plan_backward, temp_data, temp_ifft);
+    kiss_fft(plan_backward, temp_data, temp_ifft);
+    c.clear();
+    c.resize(sz);
+    for (unsigned int i = 0; i < sz; i++)
+    {
+        c[i] = temp_ifft[i].r / (double)sz;
+    }
+    free(inp_data);
+    free(filt_data);
+    free(inp_fft);
+    free(filt_fft);
+    free(temp_data);
+    free(temp_ifft);
+    free(plan_forward_inp);
+    free(plan_forward_filt);
+    free(plan_backward);
 
     return 0;
 }
@@ -1579,66 +1631,64 @@ void* bitreverse(vector<complex<double> > &sig) {
 
 }
 
+void* dwt(vector<double>& sig, int J, string nm, vector<double>& dwt_output, vector<double>& flag, vector<int>& length)
+{
+    int Max_Iter;
+    Max_Iter = (int)ceil(log(double(sig.size())) / log(2.0)) - 2;
 
-void* dwt(vector<double> &sig, int J, string nm, vector<double> &dwt_output
-                , vector<double> &flag, vector<int> &length ) {
+    if (Max_Iter < J)
+    {
+        J = Max_Iter;
+    }
 
-        int Max_Iter;
-                    Max_Iter = (int) ceil(log( double(sig.size()))/log (2.0)) - 2;
-
-                    if ( Max_Iter < J) {
-                      J = Max_Iter;
-
-                    }
-
-    vector<double> original_copy,orig, appx_sig, det_sig;
+    vector<double> original_copy, orig, appx_sig, det_sig;
     original_copy = sig;
 
     // Zero Pad the Signal to nearest 2^ M value ,where M is an integer.
     unsigned int temp_len = sig.size();
-        if ( (temp_len % 2) != 0) {
-                double temp =sig[temp_len - 1];
-                sig.push_back(temp);
-                flag.push_back(1);
-                temp_len++;
-        } else {
-                flag.push_back(0);
-        }
-        length.push_back(temp_len);
-        flag.push_back(double(J));
+    if ((temp_len % 2) != 0)
+    {
+        double temp = sig[temp_len - 1];
+        sig.push_back(temp);
+        flag.push_back(1);
+        temp_len++;
+    }
+    else
+    {
+        flag.push_back(0);
+    }
+    length.push_back(temp_len);
+    flag.push_back(double(J));
 
     orig = sig;
 
+    //  Storing Filter Values for GnuPlot
+    vector<double> lp1, hp1, lp2, hp2;
+    filtcoef(nm, lp1, hp1, lp2, hp2);
 
-        //  Storing Filter Values for GnuPlot
-             vector<double> lp1,hp1,lp2,hp2;
-             filtcoef(nm,lp1,hp1,lp2,hp2);
-
-
-    for (int iter = 0; iter < J; iter++) {
-        dwt1(nm,orig, appx_sig, det_sig);
-        dwt_output.insert(dwt_output.begin(),det_sig.begin(),det_sig.end());
+    for (int iter = 0; iter < J; iter++)
+    {
+        dwt1(nm, orig, appx_sig, det_sig);
+        dwt_output.insert(dwt_output.begin(), det_sig.begin(), det_sig.end());
 
         int l_temp = det_sig.size();
-        length.insert(length.begin(),l_temp);
+        length.insert(length.begin(), l_temp);
 
-        if (iter == J-1 ) {
-                dwt_output.insert(dwt_output.begin(),appx_sig.begin(),appx_sig.end());
-                int l_temp2 = appx_sig.size();
-                length.insert(length.begin(),l_temp2);
-
+        if (iter == J - 1)
+        {
+            dwt_output.insert(dwt_output.begin(), appx_sig.begin(), appx_sig.end());
+            int l_temp2 = appx_sig.size();
+            length.insert(length.begin(), l_temp2);
         }
 
         orig = appx_sig;
         appx_sig.clear();
         det_sig.clear();
-
     }
 
-     sig = original_copy;
-        return 0;
+    sig = original_copy;
+    return 0;
 }
-
 
 void circshift(vector<double> &sig_cir, int L){
         if ( abs(L) >(signed int) sig_cir.size()) {
@@ -1658,7 +1708,7 @@ void circshift(vector<double> &sig_cir, int L){
 
 double convol(vector<double> &a, vector<double> &b, vector<double> &c) {
      unsigned int len_c = a.size() + b.size() - 1;
-     double*  oup= NULL;
+     double*  oup;
 
      oup = new double[len_c];
      vector<double>::iterator a_it;
@@ -1674,7 +1724,7 @@ double convol(vector<double> &a, vector<double> &b, vector<double> &c) {
 
 
      for (unsigned int ini = 0; ini < len_c ; ini++){
-         double ou1 = 0;
+         double ou1;
          oup[ini] = 0;
          double temp = 0;
          for (unsigned int jni = 0; jni <= ini; jni++) {
@@ -1685,22 +1735,20 @@ double convol(vector<double> &a, vector<double> &b, vector<double> &c) {
          c.push_back(temp);
      }
      delete [] oup;
-     oup = NULL;
      return 0;
 }
 
-void downsamp(vector<double> &sig, int M, vector<double> &sig_d){
-        int len = sig.size();
-        double len_n = ceil( (double) len / (double) M);
-        for (int i = 0; i < (int) len_n; i++) {
-                double temp = sig[i*M];
-                sig_d.push_back(temp);
-        }
+void downsamp(vector<double>& sig, int M, vector<double>& sig_d)
+{
+    int len = sig.size();
+    double len_n = ceil((double)len / (double)M);
+    sig_d.clear();
+    sig_d.resize((int)len_n);
+    for (int i = 0; i < (int)len_n; i++)
+    {
+        sig_d[i] = sig[i * M];
+    }
 }
-
-
-
-
 
 void* dwt1(string wname, vector<double> &signal, vector<double> &cA, vector<double> &cD) {
 
@@ -2004,38 +2052,35 @@ int sign(int X) {
                 return -1;
 }
 
-void upsamp(vector<double> &sig, int M, vector<double> &sig_u) {
-        int len = sig.size();
-        double len_n = ceil( (double) len * (double) M);
-
-        for (int i = 0; i < (int) len_n; i++) {
-                if ( i % M == 0) {
-                                double temp = sig[i / M];
-                                        sig_u.push_back(temp);
-
-                                }
-                                else
-                                {
-                                         sig_u.push_back(0);
-                                }
-
+void upsamp(vector<double>& sig, int M, vector<double>& sig_u)
+{
+    int len = sig.size();
+    double len_n = ceil((double)len * (double)M);
+    sig_u.clear();
+    sig_u.resize(len_n);
+    for (int i = 0; i < (int)len_n; i++)
+    {
+        if (i % M == 0)
+        {
+            sig_u[i] = sig[i / M];
         }
-
-
-
+        else
+        {
+            sig_u[i] = 0.;
+        }
+    }
 }
 
 double op_sum(double i, double j) {
         return (i+j);
 }
 
-int vecsum(vector<double> &a, vector<double> &b, vector<double> &c){
-
-
+int vecsum(vector<double>& a, vector<double>& b, vector<double>& c)
+{
     c.resize(a.size());
-        transform (a.begin(), a.end(), b.begin(), b.begin(), op_sum);
-        c = b;
-                return 0;
+    transform(a.begin(), a.end(), b.begin(), b.begin(), op_sum);
+    c = b;
+    return 0;
 }
 
 void* getcoeff2d(vector<vector<double> > &dwtoutput, vector<vector<double> > &cH,
